@@ -16,14 +16,15 @@ class Game {
 private:
     bool running;
     Player player;
-    
+
     // 地图相关
     std::vector<Location> locations;
     int currentLocation;
-    
+
     void tryMove(char direction);
     void showAvailableDirections();
     void printCurrentLocationInfo();
+    void encounterBattle(const std::vector<std::string>& wildPokemons);
 
 public:
     Game();

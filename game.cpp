@@ -218,6 +218,14 @@ void Game::tryMove(char direction) {
     else if (direction == 'n') std::cout << "北";
     std::cout << "移动，来到了【" << newLoc.name << "】" << std::endl;
     std::cout << newLoc.description << std::endl;
+
+    // 随机遭遇检查：如果新地点有野生宝可梦，30% 概率触发遭遇
+    if (!newLoc.wildPokemons.empty()) {
+        int chance = rand() % 100;
+        if (chance < 30) {  // 30% 遭遇率
+            encounterBattle(newLoc.wildPokemons);
+        }
+    }
 }
 
 void Game::showAvailableDirections() {
@@ -249,5 +257,27 @@ void Game::showAvailableDirections() {
         std::cout << "北 (n)";
         first = false;
     }
+    std::cout << std::endl;
+}
+
+void Game::encounterBattle(const std::vector<std::string>& wildPokemons) {
+    std::cout << "\n⚠️  草丛在晃动..." << std::endl;
+    
+    // 随机选择一只野生宝可梦
+    int index = rand() % wildPokemons.size();
+    std::string wildPokemon = wildPokemons[index];
+    
+    std::cout << "🐾 一只野生的【" << wildPokemon << "】出现了！" << std::endl;
+    std::cout << "\n=== 遭遇战斗 ===" << std::endl;
+    std::cout << "1. 逃跑" << std::endl;
+    std::cout << "> ";
+    
+    std::string choice;
+    std::cin >> choice;
+    
+    if (choice == "1") {
+        std::cout << "🏃 你成功逃脱了！" << std::endl;
+    }
+    
     std::cout << std::endl;
 }
