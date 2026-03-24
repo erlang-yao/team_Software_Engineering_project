@@ -12,6 +12,14 @@ struct Location {
     std::vector<std::string> wildPokemons;  // 可遭遇的野生宝可梦
 };
 
+// 战斗状态
+struct BattleState {
+    bool inBattle;
+    Pokemon wildPokemon;      // 野生宝可梦
+    int playerPokeIndex;      // 玩家当前出战的宝可梦索引
+    bool playerTurn;          // 是否玩家回合
+};
+
 class Game {
 private:
     bool running;
@@ -21,10 +29,27 @@ private:
     std::vector<Location> locations;
     int currentLocation;
 
+    // 战斗相关
+    BattleState battleState;
+
     void tryMove(char direction);
     void showAvailableDirections();
     void printCurrentLocationInfo();
     void encounterBattle(const std::vector<std::string>& wildPokemons);
+    
+    // 战斗系统
+    void startBattle(const std::string& wildPokemonSpecies);
+    void battleLoop();
+    void playerTurn();
+    void enemyTurn();
+    void useMove(Pokemon& attacker, Pokemon& defender, int moveIndex, bool isPlayer);
+    void showBattleMenu();
+    void showMoveSelection();
+    void catchPokemon();
+    void healPokemon();
+    bool tryEscape();
+    void checkBattleEnd();
+    int calculateDamage(const Pokemon& attacker, const Pokemon& defender, const Move& move);
 
 public:
     Game();
