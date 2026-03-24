@@ -17,6 +17,24 @@ enum class Type {
     Flying      // 飞行
 };
 
+// 精灵球类型（按等级从低到高）
+enum class PokeBallType {
+    PokeBall,       // 普通精灵球 - 捕捉倍率 1.0
+    GreatBall,      // 超级球 - 捕捉倍率 1.5
+    UltraBall,      // 高级球 - 捕捉倍率 2.0
+    MasterBall      // 大师球 - 捕捉倍率 5.0（几乎必中）
+};
+
+// 精灵球属性
+struct PokeBall {
+    PokeBallType type;
+    std::string name;
+    float catchRate;    // 捕捉倍率
+};
+
+// 获取精灵球信息
+PokeBall getPokeBallInfo(PokeBallType type);
+
 // 技能结构
 struct Move {
     std::string name;
