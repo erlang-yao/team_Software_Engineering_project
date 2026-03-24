@@ -6,7 +6,9 @@
 #include <ctime>
 #include <windows.h>
 
-Game::Game() : running(false), currentLocation(0) {}
+Game::Game() : running(false), currentLocation(0) {
+    battleState.inBattle = false;
+}
 
 void Game::printSeparator() {
     std::cout << "========================================" << std::endl;
@@ -268,16 +270,312 @@ void Game::encounterBattle(const std::vector<std::string>& wildPokemons) {
     std::string wildPokemon = wildPokemons[index];
     
     std::cout << "🐾 一只野生的【" << wildPokemon << "】出现了！" << std::endl;
-    std::cout << "\n=== 遭遇战斗 ===" << std::endl;
-    std::cout << "1. 逃跑" << std::endl;
-    std::cout << "> ";
     
+    // 检查玩家是否有存活的宝可梦
+    if (!player.hasAlivePokemon()) {
+        std::cout << "💤 你的宝可梦都失去了战斗能力，无法对战！" << std::endl;
+        std::cout << "🏃 你被迫逃离了！" << std::endl;
+        return;
+    }
+    
+    startBattle(wildPokemon);
+}
+
+void Game::startBattle(const std::string& wildPokemonSpecies) {
+    battleState.inBattle = true;
+    battleState.wildPokemon = Pokemon(wildPokemonSpecies, 5);
+    battleState.playerPokeIndex = 0;
+    
+    // 根据速度决定谁先行动
+    Pokemon& playerPoke = player.team[battleState.playerPokeIndex];
+    if (playerPoke.stats.speed >= battleState.wildPokemon.stats.speed) {
+        battleState.playerTurn = true;
+    } else {
+        battleState.playerTurn = false;
+    }
+    
+    std::cout << "\n===============================" << std::endl;
+    std::cout << "⚔️  战斗开始！" << std::endl;
+    std::cout << "===============================" << std::endl;
+    
+    battleLoop();
+}
+
+void Game::battleLoop() {
+    while (battleState.inBattle) {
+        // 显示战斗信息
+        Pokemon& playerPoke = player.team[battleState.playerPokeIndex];
+        Pokemon& enemyPoke = battleState.wildPokemon;
+        
+        std::cout << "\n--- 战斗状态 ---" << std::endl;
+        std::cout << "🐾 【" << enemyPoke.name << "】(Lv." << enemyPoke.level 
+                  << ") HP: " << enemyPoke.stats.hp << "/" << enemyPoke.stats.maxHp << std::endl;
+        std::cout << "🧭 【" << playerPoke.name << "】(Lv." << playerPoke.level 
+                  << ") HP: " << playerPoke.stats.hp << "/" << playerPoke.stats.maxHp << std::endl;
+        std::cout << "----------------" << std::endl;
+        
+        if (battleState.playerTurn) {
+            playerTurn();
+        } else {
+            enemyTurn();
+        }
+        
+        checkBattleEnd();
+    }
+}
+
+void Game::showBattleMenu() {
+    std::cout << "\n=== 战斗菜单 ===" << std::endl;
+    std::cout << "1. 📋 技能" << std::endl;
+    std::cout << "2. ⚪ 精灵球 (剩余：" << player.pokeballs << ")" << std::endl;
+    std::cout << "3. 💊 治疗" << std::endl;
+    std::cout << "4. 🏃 逃跑" << std::endl;
+    std::cout << "> ";
+}
+
+void Game::showMoveSelection() {
+    Pokemon& playerPoke = player.team[battleState.playerPokeIndex];
+    
+    std::cout << "\n=== 选择技能 ===" << std::endl;
+    for (size_t i = 0; i < playerPoke.moves.size(); ++i) {
+        Move& move = playerPoke.moves[i];
+        std::cout << (i + 1) << ". " << move.name 
+                  << " [" << getTypeName(move.type) << "]"
+                  << " 威力:" << move.power;
+        if (move.isSpecial) std::cout << " ⭐";
+        std::cout << std::endl;
+    }
+    std::cout << "0. 返回" << std::endl;
+    std::cout << "> ";
+}
+
+void Game::playerTurn() {
+    std::cout << "\n👉 你的回合！" << std::endl;
+    
+    showBattleMenu();
     std::string choice;
     std::cin >> choice;
     
+    Pokemon& playerPoke = player.team[battleState.playerPokeIndex];
+    Pokemon& enemyPoke = battleState.wildPokemon;
+    
     if (choice == "1") {
-        std::cout << "🏃 你成功逃脱了！" << std::endl;
+        // 技能
+        showMoveSelection();
+        std::string moveChoice;
+        std::cin >> moveChoice;
+        
+        if (moveChoice >= "1" && moveChoice <= "4") {
+            int moveIndex = std::stoi(moveChoice) - 1;
+            if (moveIndex < (int)playerPoke.moves.size()) {
+                useMove(playerPoke, enemyPoke, moveIndex, true);
+                battleState.playerTurn = false;
+                return;
+            }
+        }
+        std::cout << "无效的选择！" << std::endl;
+        playerTurn();  // 重新选择
+    } else if (choice == "2") {
+        // 捕捉
+        catchPokemon();
+        battleState.playerTurn = false;
+    } else if (choice == "3") {
+        // 治疗
+        healPokemon();
+        battleState.playerTurn = false;
+    } else if (choice == "4") {
+        // 逃跑
+        if (tryEscape()) {
+            battleState.inBattle = false;
+        } else {
+            battleState.playerTurn = false;
+        }
+    } else {
+        std::cout << "无效的选择！" << std::endl;
+        playerTurn();  // 重新选择
+    }
+}
+
+void Game::enemyTurn() {
+    std::cout << "\n👉 敌方回合！" << std::endl;
+    
+    Pokemon& playerPoke = player.team[battleState.playerPokeIndex];
+    Pokemon& enemyPoke = battleState.wildPokemon;
+    
+    // 敌人随机选择一个技能
+    if (!enemyPoke.moves.empty()) {
+        int moveIndex = rand() % enemyPoke.moves.size();
+        useMove(enemyPoke, playerPoke, moveIndex, false);
     }
     
-    std::cout << std::endl;
+    battleState.playerTurn = true;
+}
+
+void Game::useMove(Pokemon& attacker, Pokemon& defender, int moveIndex, bool isPlayer) {
+    if (moveIndex < 0 || moveIndex >= (int)attacker.moves.size()) {
+        std::cout << "技能无效！" << std::endl;
+        return;
+    }
+    
+    Move& move = attacker.moves[moveIndex];
+    
+    std::cout << "\n✨ " << attacker.name << " 使用了 " << move.name << "！" << std::endl;
+    
+    // 检查命中率
+    int accuracyRoll = rand() % 100 + 1;
+    if (accuracyRoll > move.accuracy) {
+        std::cout << "💨 但是攻击落空了！" << std::endl;
+        return;
+    }
+    
+    // 计算伤害
+    if (move.power > 0) {
+        int damage = calculateDamage(attacker, defender, move);
+        
+        // 属性克制
+        float effectiveness = getTypeEffectiveness(move.type, defender.type);
+        
+        if (effectiveness == 0.0f) {
+            std::cout << "🚫 对" << getTypeName(defender.type) << "属性无效！" << std::endl;
+            return;
+        }
+        
+        if (effectiveness > 1.0f) {
+            std::cout << "🔥 效果绝佳！" << std::endl;
+        } else if (effectiveness < 1.0f) {
+            std::cout << "🛡️ 效果不好..." << std::endl;
+        }
+        
+        defender.stats.hp -= damage;
+        if (defender.stats.hp < 0) defender.stats.hp = 0;
+        
+        std::cout << "💥 造成了 " << damage << " 点伤害！" << std::endl;
+    } else {
+        // 变化技能（暂时只提示）
+        std::cout << "💫 但是这是变化技能，效果尚未实现！" << std::endl;
+    }
+}
+
+int Game::calculateDamage(const Pokemon& attacker, const Pokemon& defender, const Move& move) {
+    // 简化版伤害公式（调整后的数值更平衡）
+    // 基础伤害 = 威力 * (攻击/防御) * 0.3 系数
+    float baseDamage = (float)move.power * attacker.stats.attack / defender.stats.defense * 0.3f;
+    float stab = (move.type == attacker.type) ? 1.5f : 1.0f;  // 本系加成
+    float effectiveness = getTypeEffectiveness(move.type, defender.type);
+    float random = (float)(rand() % 16 + 85) / 100.0f;  // 0.85 - 1.00 随机波动
+
+    int damage = (int)(baseDamage * stab * effectiveness * random);
+    if (damage < 1) damage = 1;
+
+    return damage;
+}
+
+void Game::catchPokemon() {
+    Pokemon& enemyPoke = battleState.wildPokemon;
+    
+    if (player.pokeballs <= 0) {
+        std::cout << "❌ 没有精灵球了！" << std::endl;
+        return;
+    }
+    
+    player.pokeballs--;
+    
+    // 捕捉率计算：血量越低越容易捕捉
+    float catchRate = (float)enemyPoke.stats.hp / enemyPoke.stats.maxHp;
+    int randomRoll = rand() % 100;
+    int threshold = (int)((1.0f - catchRate) * 100);
+    
+    std::cout << "\n🔵 投出精灵球..." << std::endl;
+    
+    if (randomRoll < threshold) {
+        std::cout << "💫 摇晃...摇晃...咔嚓！" << std::endl;
+        std::cout << "🎉 成功收服了 " << enemyPoke.name << "！" << std::endl;
+        
+        // 将野生宝可梦加入队伍
+        Pokemon caught = enemyPoke;
+        caught.stats.hp = caught.stats.maxHp;  // 收服后恢复满 HP
+        player.addPokemon(caught);
+        
+        battleState.inBattle = false;
+    } else {
+        std::cout << "💨 哎呀！宝可梦挣脱了！" << std::endl;
+    }
+}
+
+void Game::healPokemon() {
+    Pokemon& playerPoke = player.team[battleState.playerPokeIndex];
+    
+    // 治疗当前宝可梦
+    int healAmount = playerPoke.stats.maxHp / 2;
+    playerPoke.stats.hp += healAmount;
+    if (playerPoke.stats.hp > playerPoke.stats.maxHp) {
+        playerPoke.stats.hp = playerPoke.stats.maxHp;
+    }
+    
+    std::cout << "\n💊 使用了伤药！" << std::endl;
+    std::cout << "❤️  " << playerPoke.name << " 恢复了 " << healAmount << " 点 HP！" << std::endl;
+}
+
+bool Game::tryEscape() {
+    Pokemon& playerPoke = player.team[battleState.playerPokeIndex];
+    Pokemon& enemyPoke = battleState.wildPokemon;
+    
+    // 逃跑成功率基于速度差
+    int escapeChance = 50 + (playerPoke.stats.speed - enemyPoke.stats.speed) * 2;
+    if (escapeChance < 30) escapeChance = 30;
+    if (escapeChance > 95) escapeChance = 95;
+    
+    int randomRoll = rand() % 100;
+    
+    if (randomRoll < escapeChance) {
+        std::cout << "\n🏃 成功逃脱了！" << std::endl;
+        return true;
+    } else {
+        std::cout << "\n🚫 逃跑失败了！" << std::endl;
+        return false;
+    }
+}
+
+void Game::checkBattleEnd() {
+    Pokemon& playerPoke = player.team[battleState.playerPokeIndex];
+    Pokemon& enemyPoke = battleState.wildPokemon;
+    
+    // 检查敌方是否濒死
+    if (enemyPoke.isFainted()) {
+        std::cout << "\n💫 " << enemyPoke.name << " 失去了战斗能力！" << std::endl;
+        std::cout << "🎉 战斗胜利！获得了经验值！" << std::endl;
+        
+        // 简单经验系统
+        playerPoke.exp += 20;
+        if (playerPoke.exp >= playerPoke.maxExp) {
+            playerPoke.level++;
+            playerPoke.maxExp += 50;
+            std::cout << "🎊 " << playerPoke.name << " 升到了 Lv." << playerPoke.level << "！" << std::endl;
+        }
+        
+        battleState.inBattle = false;
+        return;
+    }
+    
+    // 检查玩家宝可梦是否濒死
+    if (playerPoke.isFainted()) {
+        std::cout << "\n💫 " << playerPoke.name << " 失去了战斗能力！" << std::endl;
+        
+        // 寻找下一个存活的宝可梦
+        bool foundAlive = false;
+        for (size_t i = 0; i < player.team.size(); ++i) {
+            if (!player.team[i].isFainted()) {
+                battleState.playerPokeIndex = i;
+                foundAlive = true;
+                std::cout << "👉 派出 " << player.team[i].name << "！" << std::endl;
+                break;
+            }
+        }
+        
+        if (!foundAlive) {
+            std::cout << "💤 所有宝可梦都失去了战斗能力！" << std::endl;
+            std::cout << "🏃 被迫逃离了战斗！" << std::endl;
+            battleState.inBattle = false;
+        }
+    }
 }
