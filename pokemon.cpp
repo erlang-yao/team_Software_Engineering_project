@@ -1,5 +1,21 @@
 #include "pokemon.h"
 
+// 获取精灵球信息
+PokeBall getPokeBallInfo(PokeBallType type) {
+    switch (type) {
+        case PokeBallType::PokeBall:
+            return {PokeBallType::PokeBall, "精灵球", 1.0f};
+        case PokeBallType::GreatBall:
+            return {PokeBallType::GreatBall, "超级球", 1.5f};
+        case PokeBallType::UltraBall:
+            return {PokeBallType::UltraBall, "高级球", 2.0f};
+        case PokeBallType::MasterBall:
+            return {PokeBallType::MasterBall, "大师球", 5.0f};
+        default:
+            return {PokeBallType::PokeBall, "精灵球", 1.0f};
+    }
+}
+
 // 属性名称
 std::string getTypeName(Type type) {
     switch (type) {

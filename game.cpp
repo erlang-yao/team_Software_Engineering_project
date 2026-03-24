@@ -327,7 +327,7 @@ void Game::battleLoop() {
 void Game::showBattleMenu() {
     std::cout << "\n=== 战斗菜单 ===" << std::endl;
     std::cout << "1. 📋 技能" << std::endl;
-    std::cout << "2. ⚪ 精灵球 (剩余：" << player.pokeballs << ")" << std::endl;
+    std::cout << "2. ⚪ 精灵球 (剩余：" << player.getTotalBalls() << ")" << std::endl;
     std::cout << "3. 💊 治疗" << std::endl;
     std::cout << "4. 🏃 逃跑" << std::endl;
     std::cout << "> ";
@@ -473,21 +473,93 @@ int Game::calculateDamage(const Pokemon& attacker, const Pokemon& defender, cons
 void Game::catchPokemon() {
     Pokemon& enemyPoke = battleState.wildPokemon;
     
-    if (player.pokeballs <= 0) {
+    // 检查是否有任意精灵球
+    if (player.getTotalBalls() <= 0) {
         std::cout << "❌ 没有精灵球了！" << std::endl;
         return;
     }
     
-    player.pokeballs--;
+    // 显示精灵球选择界面
+    std::cout << "\n=== 选择精灵球 ===" << std::endl;
+    std::cout << "当前野生宝可梦：【" << enemyPoke.name << "】Lv." << enemyPoke.level 
+              << " HP:" << enemyPoke.stats.hp << "/" << enemyPoke.stats.maxHp << std::endl;
+    std::cout << std::endl;
     
-    // 捕捉率计算：血量越低越容易捕捉
-    float catchRate = (float)enemyPoke.stats.hp / enemyPoke.stats.maxHp;
+    const char* ballNames[] = {"精灵球", "超级球", "高级球", "大师球"};
+    
+    for (int i = 0; i < 4; ++i) {
+        std::cout << (i + 1) << ". " << ballNames[i];
+        if (player.pokeballs[i] > 0) {
+            std::cout << " (持有：" << player.pokeballs[i] << "个)";
+        } else {
+            std::cout << " (未持有)";
+        }
+        std::cout << std::endl;
+    }
+    std::cout << "0. 返回" << std::endl;
+    std::cout << "> ";
+    
+    std::string choice;
+    std::cin >> choice;
+    
+    if (choice == "0") {
+        return;  // 返回战斗菜单
+    }
+    
+    if (choice < "1" || choice > "4") {
+        std::cout << "无效的选择！" << std::endl;
+        catchPokemon();
+        return;
+    }
+    
+    int ballIndex = std::stoi(choice) - 1;
+    
+    if (player.pokeballs[ballIndex] <= 0) {
+        std::cout << "❌ 这种精灵球已经用完了！" << std::endl;
+        catchPokemon();
+        return;
+    }
+    
+    // 消耗精灵球
+    player.pokeballs[ballIndex]--;
+    
+    // 获取精灵球信息
+    PokeBallType ballType = static_cast<PokeBallType>(ballIndex);
+    PokeBall ball = getPokeBallInfo(ballType);
+    
+    // 计算捕捉概率
+    // 基础概率 = (1 - 当前 HP 比例) × 100
+    // 等级修正 = 1 / (1 + 等级 × 0.1)
+    // 最终概率 = 基础概率 × 等级修正 × 精灵球倍率
+    float hpRatio = (float)enemyPoke.stats.hp / enemyPoke.stats.maxHp;
+    float baseRate = (1.0f - hpRatio) * 100.0f;  // 血量越低，基础概率越高 (0-100)
+    
+    // 等级修正：等级越高，捕捉越难
+    // Lv.1 时约 0.9, Lv.5 时约 0.67, Lv.10 时约 0.5
+    float levelFactor = 1.0f / (1.0f + enemyPoke.level * 0.2f);
+    
+    // 精灵球倍率影响
+    float ballMultiplier = ball.catchRate;
+    
+    // 最终捕捉概率
+    float catchProbability = baseRate * levelFactor * ballMultiplier;
+    
+    // 大师球几乎必中
+    if (ballType == PokeBallType::MasterBall) {
+        catchProbability = 99.0f;
+    }
+    
+    // 限制概率在 1% - 100% 之间
+    if (catchProbability < 1.0f) catchProbability = 1.0f;
+    if (catchProbability > 100.0f) catchProbability = 100.0f;
+    
+    std::cout << "\n🔵 投出" << ball.name << "..." << std::endl;
+    
+    // 判断是否捕捉成功
     int randomRoll = rand() % 100;
-    int threshold = (int)((1.0f - catchRate) * 100);
+    float threshold = catchProbability;
     
-    std::cout << "\n🔵 投出精灵球..." << std::endl;
-    
-    if (randomRoll < threshold) {
+    if ((float)randomRoll < threshold) {
         std::cout << "💫 摇晃...摇晃...咔嚓！" << std::endl;
         std::cout << "🎉 成功收服了 " << enemyPoke.name << "！" << std::endl;
         
