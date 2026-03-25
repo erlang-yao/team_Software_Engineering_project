@@ -8,6 +8,9 @@
 
 Game::Game() : running(false), currentLocation(0) {
     battleState.inBattle = false;
+    teamViewState.viewing = false;
+    teamViewState.storagePage = 0;
+    teamViewState.pokemonsPerPage = 5;
 }
 
 void Game::printSeparator() {
@@ -129,7 +132,7 @@ void Game::printCurrentLocationInfo() {
     Location& current = locations[currentLocation];
     std::cout << "📍 当前位置：【" << current.name << "】" << std::endl;
     std::cout << current.description << std::endl;
-    std::cout << "🎒 精灵球：" << player.pokeballs << std::endl;
+    std::cout << "🎒 精灵球：" << player.getTotalBalls() << std::endl;
     std::cout << "👥 队伍：" << player.team.size() << "/6" << std::endl;
     std::cout << "🧭 可移动方向：";
     showAvailableDirections();
@@ -156,13 +159,12 @@ void Game::processCommand(const std::string& cmd) {
     if (action == "help" || action == "h") {
         showHelp();
     } else if (action == "team" || action == "t") {
-        std::cout << "\n=== 我的队伍 ===" << std::endl;
-        for (size_t i = 0; i < player.team.size(); ++i) {
-            Pokemon& p = player.team[i];
-            std::cout << (i + 1) << ". " << p.name
-                      << " (Lv." << p.level << ")" << std::endl;
+        // 查看队伍界面（只能在非战斗状态下使用）
+        if (battleState.inBattle) {
+            std::cout << "战斗中无法查看队伍！" << std::endl;
+        } else {
+            openTeamView();
         }
-        std::cout << std::endl;
     } else if (action == "status" || action == "st") {
         showStatus();
     } else if (action == "quit" || action == "q") {
@@ -196,7 +198,7 @@ void Game::showHelp() {
 void Game::showStatus() {
     std::cout << "\n=== 玩家状态 ===" << std::endl;
     std::cout << "名字：" << player.name << std::endl;
-    std::cout << "精灵球：" << player.pokeballs << std::endl;
+    std::cout << "精灵球：" << player.getTotalBalls() << std::endl;
     std::cout << "队伍精灵：" << player.team.size() << "/6" << std::endl;
     std::cout << "================\n" << std::endl;
 }
@@ -328,8 +330,9 @@ void Game::showBattleMenu() {
     std::cout << "\n=== 战斗菜单 ===" << std::endl;
     std::cout << "1. 📋 技能" << std::endl;
     std::cout << "2. ⚪ 精灵球 (剩余：" << player.getTotalBalls() << ")" << std::endl;
-    std::cout << "3. 💊 治疗" << std::endl;
-    std::cout << "4. 🏃 逃跑" << std::endl;
+    std::cout << "3. 💊 治疗 (剩余：" << player.getHealPotionCount() << ")" << std::endl;
+    std::cout << "4. 🔄 更换精灵" << std::endl;
+    std::cout << "5. 🏃 逃跑" << std::endl;
     std::cout << "> ";
 }
 
@@ -351,20 +354,20 @@ void Game::showMoveSelection() {
 
 void Game::playerTurn() {
     std::cout << "\n👉 你的回合！" << std::endl;
-    
+
     showBattleMenu();
     std::string choice;
     std::cin >> choice;
-    
+
     Pokemon& playerPoke = player.team[battleState.playerPokeIndex];
     Pokemon& enemyPoke = battleState.wildPokemon;
-    
+
     if (choice == "1") {
         // 技能
         showMoveSelection();
         std::string moveChoice;
         std::cin >> moveChoice;
-        
+
         if (moveChoice >= "1" && moveChoice <= "4") {
             int moveIndex = std::stoi(moveChoice) - 1;
             if (moveIndex < (int)playerPoke.moves.size()) {
@@ -384,6 +387,13 @@ void Game::playerTurn() {
         healPokemon();
         battleState.playerTurn = false;
     } else if (choice == "4") {
+        // 更换精灵
+        if (switchPokemon()) {
+            // 成功切换精灵，消耗一个回合
+            battleState.playerTurn = false;
+        }
+        // 如果没有切换（返回 false），则不消耗回合，玩家继续选择
+    } else if (choice == "5") {
         // 逃跑
         if (tryEscape()) {
             battleState.inBattle = false;
@@ -576,16 +586,103 @@ void Game::catchPokemon() {
 
 void Game::healPokemon() {
     Pokemon& playerPoke = player.team[battleState.playerPokeIndex];
-    
-    // 治疗当前宝可梦
-    int healAmount = playerPoke.stats.maxHp / 2;
+
+    // 检查是否有治疗药水
+    if (player.getHealPotionCount() <= 0) {
+        std::cout << "❌ 没有治疗药水了！" << std::endl;
+        return;
+    }
+
+    // 已阵亡的精灵无法使用治疗药水
+    if (playerPoke.isFainted()) {
+        std::cout << "❌ " << playerPoke.name << " 已经失去战斗能力，无法使用治疗药水！" << std::endl;
+        std::cout << "💡 请先使用复活药剂进行复活。" << std::endl;
+        return;
+    }
+
+    // 按最大生命值的 33% 恢复
+    int healAmount = playerPoke.stats.maxHp * 33 / 100;
+    if (healAmount < 1) healAmount = 1;  // 至少恢复 1 点 HP
+
     playerPoke.stats.hp += healAmount;
     if (playerPoke.stats.hp > playerPoke.stats.maxHp) {
         playerPoke.stats.hp = playerPoke.stats.maxHp;
     }
-    
-    std::cout << "\n💊 使用了伤药！" << std::endl;
-    std::cout << "❤️  " << playerPoke.name << " 恢复了 " << healAmount << " 点 HP！" << std::endl;
+
+    // 消耗一瓶治疗药水
+    for (auto& item : player.items) {
+        if (!item.isRevive && item.healPercent > 0) {
+            item.count--;
+            break;
+        }
+    }
+
+    std::cout << "\n💊 使用了治疗药水！" << std::endl;
+    std::cout << "❤️  " << playerPoke.name << " 恢复了 " << healAmount << " 点 HP！" 
+              << " (当前 HP: " << playerPoke.stats.hp << "/" << playerPoke.stats.maxHp << ")" << std::endl;
+}
+
+bool Game::switchPokemon() {
+    // 检查是否有可出战的精灵
+    int aliveCount = 0;
+    for (const auto& p : player.team) {
+        if (!p.isFainted()) {
+            aliveCount++;
+        }
+    }
+
+    if (aliveCount <= 1) {
+        std::cout << "❌ 没有其他可以出战的精灵了！" << std::endl;
+        return false;
+    }
+
+    std::cout << "\n=== 选择出战的精灵 ===" << std::endl;
+    for (size_t i = 0; i < player.team.size(); ++i) {
+        Pokemon& p = player.team[i];
+        std::string marker = "";
+        if (i == (size_t)battleState.playerPokeIndex) {
+            marker = " [当前出战]";
+        } else if (p.isFainted()) {
+            marker = " [无法战斗]";
+        }
+        std::cout << (i + 1) << ". " << p.name << " (Lv." << p.level << ") "
+                  << "HP:" << p.stats.hp << "/" << p.stats.maxHp << marker << std::endl;
+    }
+    std::cout << "0. 返回" << std::endl;
+    std::cout << "> ";
+
+    std::string choice;
+    std::cin >> choice;
+
+    if (choice == "0") {
+        return false;  // 返回战斗菜单，不消耗回合
+    }
+
+    int pokeIdx = std::stoi(choice);
+    if (pokeIdx < 1 || pokeIdx > (int)player.team.size()) {
+        std::cout << "无效的选择！" << std::endl;
+        return switchPokemon();  // 重新选择
+    }
+
+    int newIndex = pokeIdx - 1;
+
+    // 检查是否选择当前出战的精灵
+    if (newIndex == battleState.playerPokeIndex) {
+        std::cout << "❌ 这只精灵已经在出战中！" << std::endl;
+        return switchPokemon();  // 重新选择
+    }
+
+    // 检查精灵是否存活
+    if (player.team[newIndex].isFainted()) {
+        std::cout << "❌ 这只精灵已经失去战斗能力，无法出战！" << std::endl;
+        return switchPokemon();  // 重新选择
+    }
+
+    // 切换精灵
+    battleState.playerPokeIndex = newIndex;
+    std::cout << "👉 切换 " << player.team[battleState.playerPokeIndex].name << " 出战！" << std::endl;
+    std::cout << "⚠️  消耗了一个回合！" << std::endl;
+    return true;  // 成功切换，消耗回合
 }
 
 bool Game::tryEscape() {
@@ -650,4 +747,206 @@ void Game::checkBattleEnd() {
             battleState.inBattle = false;
         }
     }
+}
+
+// ==================== 查看队伍系统 ====================
+
+void Game::openTeamView() {
+    teamViewState.viewing = true;
+    teamViewState.storagePage = 0;
+
+    std::cout << "\n📋 进入查看队伍界面" << std::endl;
+
+    teamViewLoop();
+}
+
+void Game::teamViewLoop() {
+    while (teamViewState.viewing) {
+        printSeparator();
+        showTeamViewMenu();
+
+        std::cout << "> ";
+        std::string cmd;
+        std::getline(std::cin >> std::ws, cmd);
+
+        if (!cmd.empty()) {
+            handleTeamViewCommand(cmd);
+        }
+    }
+}
+
+void Game::showTeamViewMenu() {
+    // 闲置状态查看队伍
+    std::cout << "\n=== 🎒 背包中的精灵 ===" << std::endl;
+    std::cout << "队伍：" << player.team.size() << "/6" << std::endl;
+    for (size_t i = 0; i < player.team.size(); ++i) {
+        Pokemon& p = player.team[i];
+        std::cout << (i + 1) << ". " << p.name << " (Lv." << p.level << ") "
+                  << "HP:" << p.stats.hp << "/" << p.stats.maxHp << std::endl;
+    }
+
+    std::cout << "\n=== 🏠 仓库中的精灵 ===" << std::endl;
+    std::cout << "仓库：" << player.storage.size() << " 只" << std::endl;
+    showStorageView();
+
+    std::cout << "\n=== 📦 背包物品 ===" << std::endl;
+    showItemView();
+
+    std::cout << "\n命令:" << std::endl;
+    std::cout << "  swap [1] [2]  - 调整队伍精灵位置" << std::endl;
+    std::cout << "  use [物品编号] [精灵编号] - 使用物品" << std::endl;
+    std::cout << "  stor [背包编号] - 将背包精灵放入仓库" << std::endl;
+    std::cout << "  take [仓库编号] - 将仓库精灵放入背包空位" << std::endl;
+    std::cout << "  page [页码]   - 翻页 (仓库)" << std::endl;
+    std::cout << "  q             - 返回" << std::endl;
+}
+
+void Game::showStorageView() {
+    if (player.storage.empty()) {
+        std::cout << "(仓库为空)" << std::endl;
+        return;
+    }
+    
+    int start = teamViewState.storagePage * teamViewState.pokemonsPerPage;
+    int end = start + teamViewState.pokemonsPerPage;
+    if (start >= (int)player.storage.size()) {
+        teamViewState.storagePage = 0;
+        start = 0;
+        end = teamViewState.pokemonsPerPage;
+    }
+    
+    int totalPages = (player.storage.size() + teamViewState.pokemonsPerPage - 1) / teamViewState.pokemonsPerPage;
+    std::cout << "第 " << (teamViewState.storagePage + 1) << "/" << totalPages << " 页" << std::endl;
+    
+    for (int i = start; i < end && i < (int)player.storage.size(); ++i) {
+        Pokemon& p = player.storage[i];
+        int displayIndex = i - start + 1;
+        std::cout << displayIndex << ". " << p.name << " (Lv." << p.level << ") "
+                  << "HP:" << p.stats.hp << "/" << p.stats.maxHp << std::endl;
+    }
+}
+
+void Game::showItemView() {
+    if (player.items.empty()) {
+        std::cout << "(背包为空)" << std::endl;
+        return;
+    }
+    
+    for (size_t i = 0; i < player.items.size(); ++i) {
+        Item& item = player.items[i];
+        std::cout << (i + 1) << ". " << item.name << " x" << item.count;
+        if (item.healAmount > 0) {
+            std::cout << " (恢复" << item.healAmount << "HP)";
+        }
+        if (item.expAmount > 0) {
+            std::cout << " (+" << item.expAmount << "经验)";
+        }
+        std::cout << std::endl;
+    }
+}
+
+void Game::handleTeamViewCommand(const std::string& cmd) {
+    std::istringstream iss(cmd);
+    std::string action;
+    iss >> action;
+    
+    if (action == "q" || action == "quit") {
+        teamViewState.viewing = false;
+        std::cout << "返回游戏。" << std::endl;
+        return;
+    }
+    
+    if (action == "page") {
+        int pageNum;
+        iss >> pageNum;
+        if (pageNum < 1) {
+            std::cout << "页码必须大于 0!" << std::endl;
+            return;
+        }
+        teamViewState.storagePage = pageNum - 1;
+        int totalPages = (player.storage.size() + teamViewState.pokemonsPerPage - 1) / teamViewState.pokemonsPerPage;
+        if (teamViewState.storagePage >= totalPages) {
+            teamViewState.storagePage = totalPages - 1;
+        }
+        std::cout << "翻到第 " << pageNum << " 页。" << std::endl;
+        return;
+    }
+    
+    if (action == "swap") {
+        int idx1, idx2;
+        iss >> idx1 >> idx2;
+        if (idx1 < 1 || idx1 > (int)player.team.size() || 
+            idx2 < 1 || idx2 > (int)player.team.size()) {
+            std::cout << "无效的精灵编号!" << std::endl;
+            return;
+        }
+        if (player.swapTeamPokemon(idx1 - 1, idx2 - 1)) {
+            std::cout << "已交换精灵位置。" << std::endl;
+        } else {
+            std::cout << "交换失败!" << std::endl;
+        }
+        return;
+    }
+    
+    if (action == "use") {
+        int itemIdx, pokeIdx;
+        iss >> itemIdx >> pokeIdx;
+        if (itemIdx < 1 || itemIdx > (int)player.items.size()) {
+            std::cout << "无效的物品编号!" << std::endl;
+            return;
+        }
+        if (pokeIdx < 1 || pokeIdx > (int)player.team.size()) {
+            std::cout << "无效的精灵编号!" << std::endl;
+            return;
+        }
+        if (player.items[itemIdx - 1].count <= 0) {
+            std::cout << "物品数量不足!" << std::endl;
+            return;
+        }
+        if (player.useItemOnPokemon(itemIdx - 1, pokeIdx - 1, true)) {
+            std::cout << "使用了 " << player.items[itemIdx - 1].name << "!" << std::endl;
+        } else {
+            std::cout << "使用失败!" << std::endl;
+        }
+        return;
+    }
+    
+    if (action == "stor") {
+        int pokeIdx;
+        iss >> pokeIdx;
+        if (pokeIdx < 1 || pokeIdx > (int)player.team.size()) {
+            std::cout << "无效的背包精灵编号!" << std::endl;
+            return;
+        }
+        if (player.movePokemonToStorage(pokeIdx - 1)) {
+            std::cout << "已将精灵放入仓库。" << std::endl;
+        } else {
+            std::cout << "无法放入仓库 (队伍至少需要保留一只精灵)!" << std::endl;
+        }
+        return;
+    }
+    
+    if (action == "take") {
+        int storageIdx;
+        iss >> storageIdx;
+        int start = teamViewState.storagePage * teamViewState.pokemonsPerPage;
+        int actualIdx = start + storageIdx - 1;
+        
+        if (storageIdx < 1 || actualIdx >= (int)player.storage.size()) {
+            std::cout << "无效的仓库精灵编号!" << std::endl;
+            return;
+        }
+        if (player.team.size() >= 6) {
+            std::cout << "背包已满 (6 只)，无法放入!" << std::endl;
+            return;
+        }
+        if (player.movePokemonFromStorage(actualIdx)) {
+            std::cout << "已将精灵放入背包。" << std::endl;
+        } else {
+            std::cout << "放入失败!" << std::endl;
+        }
+        return;
+    }
+    
+    std::cout << "未知命令，输入 'q' 返回。" << std::endl;
 }

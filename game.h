@@ -20,6 +20,13 @@ struct BattleState {
     bool playerTurn;          // 是否玩家回合
 };
 
+// 查看队伍界面状态
+struct TeamViewState {
+    bool viewing;
+    int storagePage;         // 仓库当前页码
+    int pokemonsPerPage;     // 每页显示的精灵数量
+};
+
 class Game {
 private:
     bool running;
@@ -31,12 +38,15 @@ private:
 
     // 战斗相关
     BattleState battleState;
+    
+    // 查看队伍界面相关
+    TeamViewState teamViewState;
 
     void tryMove(char direction);
     void showAvailableDirections();
     void printCurrentLocationInfo();
     void encounterBattle(const std::vector<std::string>& wildPokemons);
-    
+
     // 战斗系统
     void startBattle(const std::string& wildPokemonSpecies);
     void battleLoop();
@@ -47,9 +57,18 @@ private:
     void showMoveSelection();
     void catchPokemon();
     void healPokemon();
+    bool switchPokemon();  // 更换出战精灵，返回是否成功切换
     bool tryEscape();
     void checkBattleEnd();
     int calculateDamage(const Pokemon& attacker, const Pokemon& defender, const Move& move);
+    
+    // 查看队伍系统（闲置状态）
+    void openTeamView();
+    void teamViewLoop();
+    void showTeamViewMenu();
+    void showStorageView();
+    void showItemView();
+    void handleTeamViewCommand(const std::string& cmd);
 
 public:
     Game();
