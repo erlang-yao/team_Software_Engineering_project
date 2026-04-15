@@ -1,0 +1,90 @@
+openapi: 3.0.0
+info:
+  title: 宝可梦 MUD 游戏核心 API
+  description: 软件工程 Sprint 2 交付 - 前后端分离架构接口契约
+  version: 1.0.0
+
+paths:
+  /api/player/status:
+    get:
+      summary: 获取玩家当前状态与位置信息
+      description: 对应 C++ 中的 Game::printCurrentLocationInfo 与 Game::showStatus
+      responses:
+        '200':
+          description: 请求成功
+          content:
+            application/json:
+              example:
+                playerName: "Red"
+                currentLocation: "新手村"
+                locationDescription: "一个宁静的小村庄，训练家们在这里开始他们的旅程"
+                totalPokeBalls: 14
+                teamCount: 1
+                maxTeamSize: 6
+
+  /api/game/move:
+    post:
+      summary: 玩家移动
+      description: 对应 C++ 中的 Map::tryMove，支持方向为东(e)、西(w)、南(s)、北(n)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                direction:
+                  type: string
+                  enum: [e, w, s, n]
+                  description: 移动方向标识
+            example:
+              direction: "e"
+      responses:
+        '200':
+          description: 移动结算结果
+          content:
+            application/json:
+              example:
+                success: true
+                message: "向东移动，来到了【望风坡】"
+                encounterWildPokemon: true
+                wildPokemonSpecies: "波波"
+        '400':
+          description: 移动失败（方向无路）
+          content:
+            application/json:
+              example:
+                success: false
+                message: "无法移动！那个方向没有路。"
+
+  /api/battle/action:
+    post:
+      summary: 执行战斗回合动作
+      description: 对应 C++ Battle::run 循环中的玩家选项（技能、精灵球、治疗、更换、逃跑）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                actionType:
+                  type: integer
+                  enum: [1, 2, 3, 4, 5]
+                  description: "1:技能 2:精灵球 3:治疗 4:更换 5:逃跑"
+                targetIndex:
+                  type: integer
+                  description: 技能索引或精灵球类型索引 (0-3)
+            example:
+              actionType: 1
+              targetIndex: 0
+      responses:
+        '200':
+          description: 回合结算日志与状态更新
+          content:
+            application/json:
+              example:
+                battleEnded: false
+                actionLog: "✨ 小火龙 使用了 抓！💥 造成了 12 点伤害！👉 敌方回合！野生波波使用了撞击！"
+                playerPokeHp: 25
+                enemyPokeHp: 8
