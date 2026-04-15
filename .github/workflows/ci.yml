@@ -14,10 +14,13 @@ jobs:
     - uses: actions/checkout@v3
     
     - name: Compile Game
+      # 使用 C++14 标准编译所有 cpp 文件，生成 exe 可执行文件
       run: |
         g++ -std=c++14 *.cpp -o pokemon_mud.exe
         
     - name: Run Basic Test
+      # 强制使用 bash 终端，并通过管道自动输入 "1" 和 "q" 模拟玩家操作
+      shell: bash
       run: |
-        .\pokemon_mud.exe --help
+        echo -e "1\nq" | ./pokemon_mud.exe
       continue-on-error: true
