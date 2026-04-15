@@ -15,7 +15,7 @@ jobs:
     
     - name: Compile Game
       run: |
-        g++ -std=c++11 *.cpp -o pokemon_mud.exe
+        g++ -std=c++14 *.cpp -o pokemon_mud.exe
         
     - name: Run Basic Test
       run: |
