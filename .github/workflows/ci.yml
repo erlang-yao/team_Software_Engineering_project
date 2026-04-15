@@ -1,0 +1,23 @@
+name: C++ CI Build
+
+on:
+  push:
+    branches: [ "develop", "main" ]
+  pull_request:
+    branches: [ "develop", "main" ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Compile Game
+      run: |
+        g++ -std=c++14 *.cpp -o pokemon_mud.exe
+        
+    - name: Run Basic Test
+      run: |
+        .\pokemon_mud.exe --help
+      continue-on-error: true
