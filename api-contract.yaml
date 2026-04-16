@@ -1,12 +1,18 @@
 openapi: 3.0.0
 info:
   title: 宝可梦 MUD 游戏核心 API
+<<<<<<< HEAD
   description: 软件工程 Sprint 3 Mock 环境接口契约
   version: 1.0.0
 
 servers:
   - url: http://127.0.0.1:4010
 
+=======
+  description: 软件工程 Sprint 2 交付 - 前后端分离架构接口契约
+  version: 1.0.0
+
+>>>>>>> upstream/main
 paths:
   /api/player/status:
     get:
@@ -17,6 +23,7 @@ paths:
           description: 请求成功
           content:
             application/json:
+<<<<<<< HEAD
               schema:
                 type: object
                 properties:
@@ -36,6 +43,12 @@ paths:
                 playerName: Red
                 currentLocation: 新手村
                 locationDescription: 一个宁静的小村庄，训练家们在这里开始他们的旅程
+=======
+              example:
+                playerName: "Red"
+                currentLocation: "新手村"
+                locationDescription: "一个宁静的小村庄，训练家们在这里开始他们的旅程"
+>>>>>>> upstream/main
                 totalPokeBalls: 14
                 teamCount: 1
                 maxTeamSize: 6
@@ -43,13 +56,18 @@ paths:
   /api/game/move:
     post:
       summary: 玩家移动
+<<<<<<< HEAD
       description: 对应 C++ 中的 Map::tryMove
+=======
+      description: 对应 C++ 中的 Map::tryMove，支持方向为东(e)、西(w)、南(s)、北(n)
+>>>>>>> upstream/main
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+<<<<<<< HEAD
               required:
                 - direction
               properties:
@@ -62,11 +80,21 @@ paths:
                     - n
             example:
               direction: e
+=======
+              properties:
+                direction:
+                  type: string
+                  enum: [e, w, s, n]
+                  description: 移动方向标识
+            example:
+              direction: "e"
+>>>>>>> upstream/main
       responses:
         '200':
           description: 移动结算结果
           content:
             application/json:
+<<<<<<< HEAD
               schema:
                 type: object
                 properties:
@@ -84,10 +112,18 @@ paths:
                 message: 向东移动，来到了【望风坡】
                 encounterWildPokemon: true
                 wildPokemonSpecies: 波波
+=======
+              example:
+                success: true
+                message: "向东移动，来到了【望风坡】"
+                encounterWildPokemon: true
+                wildPokemonSpecies: "波波"
+>>>>>>> upstream/main
         '400':
           description: 移动失败（方向无路）
           content:
             application/json:
+<<<<<<< HEAD
               schema:
                 type: object
                 properties:
@@ -98,6 +134,11 @@ paths:
               example:
                 success: false
                 message: 无法移动！那个方向没有路。
+=======
+              example:
+                success: false
+                message: "无法移动！那个方向没有路。"
+>>>>>>> upstream/main
 
   /api/battle/action:
     post:
@@ -109,6 +150,7 @@ paths:
           application/json:
             schema:
               type: object
+<<<<<<< HEAD
               required:
                 - actionType
               properties:
@@ -122,6 +164,16 @@ paths:
                     - 5
                 targetIndex:
                   type: integer
+=======
+              properties:
+                actionType:
+                  type: integer
+                  enum: [1, 2, 3, 4, 5]
+                  description: "1:技能 2:精灵球 3:治疗 4:更换 5:逃跑"
+                targetIndex:
+                  type: integer
+                  description: 技能索引或精灵球类型索引 (0-3)
+>>>>>>> upstream/main
             example:
               actionType: 1
               targetIndex: 0
@@ -130,6 +182,7 @@ paths:
           description: 回合结算日志与状态更新
           content:
             application/json:
+<<<<<<< HEAD
               schema:
                 type: object
                 properties:
@@ -160,3 +213,10 @@ paths:
               example:
                 battleEnded: false
                 actionLog: 无效操作或参数错误
+=======
+              example:
+                battleEnded: false
+                actionLog: "✨ 小火龙 使用了 抓！💥 造成了 12 点伤害！👉 敌方回合！野生波波使用了撞击！"
+                playerPokeHp: 25
+                enemyPokeHp: 8
+>>>>>>> upstream/main

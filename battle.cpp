@@ -4,10 +4,19 @@
 #include "config.h"
 #include "utils.h"
 
+/*
+ * battle.cpp
+ *
+ * 负责战斗流程的实现：回合循环、伤害计算、捕捉/逃跑、切换与治疗、战斗结束判定。
+ * 约定：Battle 持有 Player 的引用，并会直接修改玩家队伍与背包相关数据（HP、经验、道具数量等）。
+ */
+
+// 构造：默认不在战斗中。
 Battle::Battle(Player& player) : player(player) {
     state.inBattle = false;
 }
 
+// 开始战斗：生成野生宝可梦，并根据速度决定先手。
 void Battle::start(const std::string& wildPokemonSpecies) {
     state.inBattle = true;
     state.wildPokemon = Pokemon(wildPokemonSpecies, 5);
@@ -30,6 +39,7 @@ const BattleState& Battle::getState() const {
     return state;
 }
 
+// 战斗主循环：玩家回合与敌方回合交替执行，直到 checkBattleEnd() 判定结束。
 void Battle::run() {
     while (state.inBattle) {
         // 显示战斗信息
@@ -140,6 +150,7 @@ void Battle::run() {
     }
 }
 
+// 敌方回合：当前为简单 AI（随机选择一个可用技能）。
 void Battle::enemyTurn() {
     std::cout << "\n👉 敌方回合！" << std::endl;
 
@@ -155,6 +166,7 @@ void Battle::enemyTurn() {
     state.playerTurn = true;
 }
 
+// 伤害计算：基础伤害 × (STAB) × (属性克制) × (随机浮动)，并保证最小伤害。
 int Battle::calculateDamage(const Pokemon& attacker, const Pokemon& defender, const Move& move) {
     float baseDamage = (float)move.power * attacker.stats.attack / defender.stats.defense * DAMAGE_BASE_MULTIPLIER;
     float stab = (move.type == attacker.type) ? STAB_MULTIPLIER : 1.0f;
@@ -167,6 +179,7 @@ int Battle::calculateDamage(const Pokemon& attacker, const Pokemon& defender, co
     return damage;
 }
 
+// 使用技能：检查索引与命中率，按属性克制结算伤害并扣减目标 HP。
 void Battle::useMove(Pokemon& attacker, Pokemon& defender, int moveIndex, bool isPlayer) {
     if (moveIndex < 0 || moveIndex >= (int)attacker.moves.size()) {
         std::cout << "技能无效！" << std::endl;
@@ -209,6 +222,7 @@ void Battle::useMove(Pokemon& attacker, Pokemon& defender, int moveIndex, bool i
     }
 }
 
+// 尝试逃跑：基础概率 + 速度差修正，并进行上下限钳制。
 bool Battle::tryEscape() {
     Pokemon& playerPoke = player.team[state.playerPokeIndex];
     Pokemon& enemyPoke = state.wildPokemon;
@@ -228,6 +242,7 @@ bool Battle::tryEscape() {
     }
 }
 
+// 捕捉野生宝可梦：消耗精灵球，按剩余 HP、等级与球倍率计算成功概率。
 void Battle::catchPokemon(int ballIndex) {
     Pokemon& enemyPoke = state.wildPokemon;
 
@@ -266,6 +281,7 @@ void Battle::catchPokemon(int ballIndex) {
     }
 }
 
+// 更换出战宝可梦：列出可用队伍并读取输入，校验后更新 state.playerPokeIndex。
 bool Battle::switchPokemon() {
     int aliveCount = 0;
     for (const auto& p : player.team) {
@@ -325,6 +341,7 @@ bool Battle::switchPokemon() {
     return true;
 }
 
+// 治疗当前出战宝可梦：按配置的百分比回复，并扣减一个治疗道具。
 void Battle::healPokemon() {
     Pokemon& playerPoke = player.team[state.playerPokeIndex];
 
@@ -358,10 +375,12 @@ void Battle::healPokemon() {
               << " (当前 HP: " << playerPoke.stats.hp << "/" << playerPoke.stats.maxHp << ")" << std::endl;
 }
 
+// 玩家是否仍存在可战斗宝可梦（委托给 Player 进行判断）。
 bool Battle::hasAlivePokemon() const {
     return player.hasAlivePokemon();
 }
 
+// 战斗结束判定：处理敌方倒下（经验/升级）与我方倒下（自动换人/失败）两种分支。
 void Battle::checkBattleEnd() {
     Pokemon& playerPoke = player.team[state.playerPokeIndex];
     Pokemon& enemyPoke = state.wildPokemon;
