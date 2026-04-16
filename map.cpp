@@ -6,6 +6,21 @@
 Map::Map() : currentLocation(0) {}
 
 void Map::init() {
+    /*
+     * 地图编号对应关系（locations 下标）：
+     * 0 - 新手村
+     * 1 - 望风坡
+     * 2 - 迷雾森林
+     * 3 - 湖边
+     * 4 - 精灵中心
+     * 5 - 山洞入口
+     * 6 - 山洞深处
+     *
+     * 说明：
+     * - 每个 Location 的 connections 记录“方向(char) -> 目标地图编号(int)”的邻接关系。
+     * - wildPokemons 为空表示该地图不会触发野外遭遇（例如城镇/中心）。
+     */
+
     // 地图 0: 新手村
     Location loc0;
     loc0.name = "新手村";
@@ -76,6 +91,9 @@ int Map::getCurrentLocationIndex() const {
     return currentLocation;
 }
 
+// tryMove() 的逻辑说明：
+// - 在当前位置的 connections 中查找方向键 direction；未找到则表示该方向不可达。
+// - 找到时，将 currentLocation 切换为目标地图编号。
 bool Map::tryMove(char direction) {
     Location& current = locations[currentLocation];
     
@@ -97,6 +115,9 @@ std::vector<char> Map::getAvailableDirections() const {
     return directions;
 }
 
+// shouldEncounter() 的遭遇判定说明：
+// - 若当前位置没有可遭遇的野生宝可梦（wildPokemons 为空），则一定不会遭遇。
+// - 否则生成 0~99 的随机数，若其小于 ENCOUNTER_CHANCE_PERCENT 则触发遭遇。
 bool Map::shouldEncounter() const {
     const Location& current = locations[currentLocation];
     if (current.wildPokemons.empty()) {
