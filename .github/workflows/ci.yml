@@ -19,4 +19,6 @@ jobs:
         run: msbuild .\PokeMonMud.sln /p:Configuration=Debug
 
       - name: Run unit tests
-        run: .\PokemonTestsNative\Debug\PokemonTestsNative.exe --logger://console
+        run: |
+          cd PokemonTestsNative\x64\Debug
+          vstest.console.exe PokemonTestsNative.dll /Logger:trx
