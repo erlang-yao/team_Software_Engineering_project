@@ -27,7 +27,7 @@ private:
 
     // 战斗动作
     // 说明：这些函数是战斗内部的“动作/规则实现”，不直接负责 UI 菜单展示。
-    int calculateDamage(const Pokemon& attacker, const Pokemon& defender, const Move& move);
+    
     void useMove(Pokemon& attacker, Pokemon& defender, int moveIndex, bool isPlayer);
     bool tryEscape();
     void catchPokemon(int ballIndex);
@@ -41,6 +41,8 @@ private:
     bool hasAlivePokemon() const;
 
 public:
+    int calculateDamage(const Pokemon& attacker, const Pokemon& defender, const Move& move);
+
     // 绑定到一个 Player（读取其队伍、背包与精灵球数量）。
     Battle(Player& player);
 

@@ -1,26 +1,22 @@
-name: C++ CI Build
+name: CI
 
 on:
   push:
-    branches: [ "develop", "main" ]
+    branches: [ main ]
   pull_request:
-    branches: [ "develop", "main" ]
+    branches: [ main ]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: windows-latest
-    
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Compile Game
-      # 使用 C++14 标准编译所有 cpp 文件，生成 exe 可执行文件
-      run: |
-        g++ -std=c++14 *.cpp -o pokemon_mud.exe
-        
-    - name: Run Basic Test
-      # 强制使用 bash 终端，并通过管道自动输入 "1" 和 "q" 模拟玩家操作
-      shell: bash
-      run: |
-        echo -e "1\nq" | ./pokemon_mud.exe
-      continue-on-error: true
+      - uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build solution
+        run: msbuild .\PokeMonMud.sln /p:Configuration=Debug
+
+      - name: Run unit tests
+        run: .\PokemonTestsNative\Debug\PokemonTestsNative.exe --logger://console
