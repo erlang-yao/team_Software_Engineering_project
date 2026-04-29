@@ -1,4 +1,5 @@
 #include "battle.h"
+#include "battle_rules.h"
 #include <iostream>
 #include <cstdlib>
 #include "config.h"
@@ -168,15 +169,8 @@ void Battle::enemyTurn() {
 
 // 伤害计算：基础伤害 × (STAB) × (属性克制) × (随机浮动)，并保证最小伤害。
 int Battle::calculateDamage(const Pokemon& attacker, const Pokemon& defender, const Move& move) {
-    float baseDamage = (float)move.power * attacker.stats.attack / defender.stats.defense * DAMAGE_BASE_MULTIPLIER;
-    float stab = (move.type == attacker.type) ? STAB_MULTIPLIER : 1.0f;
-    float effectiveness = getTypeEffectiveness(move.type, defender.type);
     float random = (float)(rand() % 16 + 85) / 100.0f;
-
-    int damage = (int)(baseDamage * stab * effectiveness * random);
-    if (damage < MIN_DAMAGE) damage = MIN_DAMAGE;
-
-    return damage;
+    return CalculateDamage(attacker, defender, move, random);
 }
 
 // 使用技能：检查索引与命中率，按属性克制结算伤害并扣减目标 HP。
@@ -227,9 +221,7 @@ bool Battle::tryEscape() {
     Pokemon& playerPoke = player.team[state.playerPokeIndex];
     Pokemon& enemyPoke = state.wildPokemon;
 
-    int escapeChance = ESCAPE_BASE_CHANCE + (playerPoke.stats.speed - enemyPoke.stats.speed) * ESCAPE_SPEED_MULTIPLIER;
-    if (escapeChance < ESCAPE_MIN_CHANCE) escapeChance = ESCAPE_MIN_CHANCE;
-    if (escapeChance > ESCAPE_MAX_CHANCE) escapeChance = ESCAPE_MAX_CHANCE;
+    int escapeChance = CalculateEscapeChance(playerPoke.stats.speed, enemyPoke.stats.speed);
 
     int randomRoll = rand() % 100;
 
@@ -251,18 +243,12 @@ void Battle::catchPokemon(int ballIndex) {
     PokeBall ball = getPokeBallInfo(static_cast<PokeBallType>(ballIndex));
 
     // 计算捕捉概率
-    float hpRatio = (float)enemyPoke.stats.hp / enemyPoke.stats.maxHp;
-    float baseRate = (1.0f - hpRatio) * 100.0f;
-    float levelFactor = 1.0f / (1.0f + enemyPoke.level * CATCH_LEVEL_FACTOR_BASE);
-    float ballMultiplier = ball.catchRate;
-    float catchProbability = baseRate * levelFactor * ballMultiplier;
-
-    if (ballIndex == 3) {  // 大师球
-        catchProbability = MASTERBALL_CATCH_RATE;
-    }
-
-    if (catchProbability < CATCH_MIN_PROBABILITY) catchProbability = CATCH_MIN_PROBABILITY;
-    if (catchProbability > CATCH_MAX_PROBABILITY) catchProbability = CATCH_MAX_PROBABILITY;
+    float catchProbability = CalculateCatchProbability(
+        enemyPoke.stats.hp,
+        enemyPoke.stats.maxHp,
+        enemyPoke.level,
+        ball.catchRate,
+        ballIndex == 3);
 
     std::cout << "\n🔵 投出" << ball.name << "..." << std::endl;
 
