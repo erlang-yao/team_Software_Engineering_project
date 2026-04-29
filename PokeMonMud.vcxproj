@@ -127,25 +127,27 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
+
   <ItemGroup>
-    <ClCompile Include="G:\team_Software_Engineering_project-main\team_Software_Engineering_project-main\battle.cpp" />
-    <ClCompile Include="G:\team_Software_Engineering_project-main\team_Software_Engineering_project-main\game.cpp" />
-    <ClCompile Include="G:\team_Software_Engineering_project-main\team_Software_Engineering_project-main\main.cpp" />
-    <ClCompile Include="G:\team_Software_Engineering_project-main\team_Software_Engineering_project-main\map.cpp" />
-    <ClCompile Include="G:\team_Software_Engineering_project-main\team_Software_Engineering_project-main\player.cpp" />
-    <ClCompile Include="G:\team_Software_Engineering_project-main\team_Software_Engineering_project-main\pokemon.cpp" />
-    <ClCompile Include="G:\team_Software_Engineering_project-main\team_Software_Engineering_project-main\team_view.cpp" />
+    <ClCompile Include="battle.cpp" />
+    <ClCompile Include="game.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="map.cpp" />
+    <ClCompile Include="player.cpp" />
+    <ClCompile Include="pokemon.cpp" />
+    <ClCompile Include="team_view.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="G:\team_Software_Engineering_project-main\team_Software_Engineering_project-main\battle.h" />
-    <ClInclude Include="G:\team_Software_Engineering_project-main\team_Software_Engineering_project-main\config.h" />
-    <ClInclude Include="G:\team_Software_Engineering_project-main\team_Software_Engineering_project-main\game.h" />
-    <ClInclude Include="G:\team_Software_Engineering_project-main\team_Software_Engineering_project-main\map.h" />
-    <ClInclude Include="G:\team_Software_Engineering_project-main\team_Software_Engineering_project-main\player.h" />
-    <ClInclude Include="G:\team_Software_Engineering_project-main\team_Software_Engineering_project-main\pokemon.h" />
-    <ClInclude Include="G:\team_Software_Engineering_project-main\team_Software_Engineering_project-main\team_view.h" />
-    <ClInclude Include="G:\team_Software_Engineering_project-main\team_Software_Engineering_project-main\utils.h" />
+    <ClInclude Include="battle.h" />
+    <ClInclude Include="config.h" />
+    <ClInclude Include="game.h" />
+    <ClInclude Include="map.h" />
+    <ClInclude Include="player.h" />
+    <ClInclude Include="pokemon.h" />
+    <ClInclude Include="team_view.h" />
+    <ClInclude Include="utils.h" />
   </ItemGroup>
+  
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
