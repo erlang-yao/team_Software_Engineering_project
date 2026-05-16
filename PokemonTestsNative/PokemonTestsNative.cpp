@@ -1,8 +1,8 @@
 ﻿#include "pch.h"
 #include "CppUnitTest.h"
-#include "G:/team_Software_Engineering_project-main/team_Software_Engineering_project-main/battle.h"
-#include "G:/team_Software_Engineering_project-main/team_Software_Engineering_project-main/player.h"
-#include "G:/team_Software_Engineering_project-main/team_Software_Engineering_project-main/map.h"
+#include "../battle.h"
+#include "../player.h"
+#include "../map.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
