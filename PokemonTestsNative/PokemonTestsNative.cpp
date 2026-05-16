@@ -29,7 +29,7 @@ public:
         map.init();
         Assert::IsTrue(map.tryMove('n'));
         Assert::AreEqual(1, map.getCurrentLocationIndex());
-        Assert::IsFalse(map.tryMove('w'));
+        Assert::IsFalse(map.tryMove('w'));#tets
     }
 
     TEST_METHOD(TestTypeEffectiveness) {
