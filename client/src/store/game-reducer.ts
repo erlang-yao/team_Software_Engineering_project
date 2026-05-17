@@ -1,7 +1,7 @@
 import { GameState, GameAction } from '../types';
 
 export const initialState: GameState = {
-  sessionId: localStorage.getItem('pokemon_session_id'),
+  sessionId: null,
   screen: 'start',
   playerName: '',
   playerStatus: null,

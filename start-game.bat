@@ -1,5 +1,5 @@
 @echo off
-set PATH=G:\nodejs;%PATH%
+@REM set PATH=G:\nodejs;%PATH%
 
 echo ========================================
 echo   Pokemon MUD - Starting...

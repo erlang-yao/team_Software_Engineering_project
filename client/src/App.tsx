@@ -4,10 +4,13 @@ import LoginScreen from './components/screens/LoginScreen';
 import StartScreen from './components/screens/StartScreen';
 import GameScreen from './components/screens/GameScreen';
 import BattleScreen from './components/screens/BattleScreen';
+import { api, setSessionId, clearSessionId } from './api/client';
+import type { PlayerStatusResponse } from './types';
 
 const App: React.FC = () => {
   const { state, dispatch } = useGameState();
   const [needsStarter, setNeedsStarter] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(false);
 
   useEffect(() => {
     if (state.notification) {
@@ -23,6 +26,28 @@ const App: React.FC = () => {
     }
   }, [state.error, dispatch]);
 
+  // 验证并恢复已保存的 session
+  useEffect(() => {
+    const savedSessionId = localStorage.getItem('pokemon_session_id');
+    if (!savedSessionId) return;
+
+    setCheckingSession(true);
+    setSessionId(savedSessionId);
+
+    api.get<PlayerStatusResponse>('/player/status')
+      .then((status) => {
+        dispatch({ type: 'SET_SESSION', sessionId: savedSessionId });
+        dispatch({ type: 'UPDATE_PLAYER', status });
+        dispatch({ type: 'SET_SCREEN', screen: 'game' });
+      })
+      .catch(() => {
+        clearSessionId();
+      })
+      .finally(() => {
+        setCheckingSession(false);
+      });
+  }, [dispatch]);
+
   const handleLogin = (needsStarter: boolean) => {
     if (needsStarter) {
       setNeedsStarter(true);
@@ -32,8 +57,16 @@ const App: React.FC = () => {
     }
   };
 
-  // 默认：登录页
-  const isLoggedIn = state.sessionId && state.screen !== 'start';
+  if (checkingSession) {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        width: '100vw', height: '100vh', background: '#0a0a1a',
+      }}>
+        <p style={{ color: '#FFD700', fontSize: 18 }}>正在恢复游戏...</p>
+      </div>
+    );
+  }
 
   return (
     <div style={{ width: '100vw', minHeight: '100vh', background: '#0a0a1a' }}>
