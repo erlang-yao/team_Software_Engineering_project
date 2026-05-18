@@ -32,8 +32,11 @@ jobs:
           if (-not $vstest) {
             throw 'vstest.console.exe was not found on the GitHub Actions runner.'
           }
-          Set-Location PokemonTestsNative\x64\Debug
-          & $vstest PokemonTestsNative.dll /Logger:trx
+          $testDll = Join-Path $PWD 'x64\Debug\PokemonTestsNative.dll'
+          if (-not (Test-Path $testDll)) {
+            throw "PokemonTestsNative.dll was not found at $testDll"
+          }
+          & $vstest $testDll /Logger:trx
 
       - name: Install server dependencies
         working-directory: .\server
