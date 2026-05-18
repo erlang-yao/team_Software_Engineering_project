@@ -27,8 +27,13 @@ jobs:
 
       - name: Run unit tests
         run: |
-          cd PokemonTestsNative\x64\Debug
-          vstest.console.exe PokemonTestsNative.dll /Logger:trx
+          $vstest = Get-ChildItem 'C:\Program Files\Microsoft Visual Studio\2022' -Recurse -Filter vstest.console.exe -ErrorAction SilentlyContinue |
+            Select-Object -First 1 -ExpandProperty FullName
+          if (-not $vstest) {
+            throw 'vstest.console.exe was not found on the GitHub Actions runner.'
+          }
+          Set-Location PokemonTestsNative\x64\Debug
+          & $vstest PokemonTestsNative.dll /Logger:trx
 
       - name: Install server dependencies
         working-directory: .\server
