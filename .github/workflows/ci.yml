@@ -12,6 +12,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
@@ -20,5 +27,25 @@ jobs:
 
       - name: Run unit tests
         run: |
-          cd PokemonTestsNative\x64\Debug
-          vstest.console.exe PokemonTestsNative.dll /Logger:trx
+          $vstest = Get-ChildItem 'C:\Program Files\Microsoft Visual Studio\2022' -Recurse -Filter vstest.console.exe -ErrorAction SilentlyContinue |
+            Select-Object -First 1 -ExpandProperty FullName
+          if (-not $vstest) {
+            throw 'vstest.console.exe was not found on the GitHub Actions runner.'
+          }
+          $testDll = Join-Path $PWD 'x64\Debug\PokemonTestsNative.dll'
+          if (-not (Test-Path $testDll)) {
+            throw "PokemonTestsNative.dll was not found at $testDll"
+          }
+          & $vstest $testDll /Logger:trx
+
+      - name: Install server dependencies
+        working-directory: .\server
+        run: npm ci
+
+      - name: Build server
+        working-directory: .\server
+        run: npm run build
+
+      - name: Run server integration tests
+        working-directory: .\server
+        run: npm run test:integration

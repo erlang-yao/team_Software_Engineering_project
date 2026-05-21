@@ -20,6 +20,7 @@ class SessionManager {
 
   constructor() {
     this.cleanupInterval = setInterval(() => this.cleanup(), 30 * 60 * 1000);
+    this.cleanupInterval.unref?.();
   }
 
   // 登录已有账户（加载存档）

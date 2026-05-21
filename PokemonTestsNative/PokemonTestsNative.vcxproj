@@ -159,6 +159,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\battle.cpp" />
+    <ClCompile Include="..\battle_rules.cpp" />
     <ClCompile Include="..\game.cpp" />
     <ClCompile Include="..\map.cpp" />
     <ClCompile Include="..\player.cpp" />

@@ -2,11 +2,14 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
 
-const DATA_DIR = path.join(__dirname, '..', '..', 'data');
+function getDataDir(): string {
+  return process.env.POKEMON_MUD_DATA_DIR || path.join(__dirname, '..', '..', 'data');
+}
 
 function ensureDataDir() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  const dataDir = getDataDir();
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
   }
 }
 
@@ -30,17 +33,15 @@ export interface PlayerSaveData {
   currentLocation: number;
 }
 
-// 用户账号文件
 function usersFilePath(): string {
   ensureDataDir();
-  return path.join(DATA_DIR, 'users.json');
+  return path.join(getDataDir(), 'users.json');
 }
 
-// 玩家存档文件
 function playerSavePath(username: string): string {
   ensureDataDir();
-  const safe = username.replace(/[^a-zA-Z0-9一-鿿_-]/g, '_');
-  return path.join(DATA_DIR, `save_${safe}.json`);
+  const safe = username.replace(/[^a-zA-Z0-9\u4e00-\u9fa5_-]/g, '_');
+  return path.join(getDataDir(), `save_${safe}.json`);
 }
 
 export function loadUsers(): Record<string, UserRecord> {
@@ -60,12 +61,14 @@ function saveUsers(users: Record<string, UserRecord>) {
 
 export function registerUser(username: string, password: string): UserRecord | null {
   const users = loadUsers();
-  if (users[username]) return null; // 已存在
+  if (users[username]) return null;
+
   const record: UserRecord = {
     username,
     passwordHash: hashPassword(password),
     createdAt: new Date().toISOString(),
   };
+
   users[username] = record;
   saveUsers(users);
   return record;
@@ -79,7 +82,6 @@ export function loginUser(username: string, password: string): UserRecord | null
   return record;
 }
 
-// 存档读写
 export function loadPlayerSave(username: string): PlayerSaveData | null {
   const fp = playerSavePath(username);
   if (!fs.existsSync(fp)) return null;
